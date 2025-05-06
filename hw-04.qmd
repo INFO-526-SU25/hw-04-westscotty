@@ -1,0 +1,40 @@
+---
+title: "HW 04"
+author: "INSERT YOUR NAME HERE"
+format:
+  html:
+    embed-resources: true
+toc: true
+---
+
+```{r load-packages, message = FALSE}
+library(tidyverse)
+# add any other packages you use here
+```
+
+
+## 1 - A second chance
+
+```{r}
+#| label: label-me-1
+
+```
+
+
+## 2.  Arizona state of counties
+
+```{r}
+#| label: label-me-2
+
+```
+
+## 3.  Arizona state of population change
+
+```{r}
+#| label: label-me-3
+
+```
+
+## 4.  Arizona state of Indiginous Tribal Regions
+
+## 5. Arizona state of patchwork
