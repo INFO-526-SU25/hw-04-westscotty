@@ -1,40 +1,170 @@
 ---
 title: "HW 04"
-author: "INSERT YOUR NAME HERE"
-format:
+author: "Weston Scott"
+format: 
   html:
     embed-resources: true
+    fig-alt: true
 toc: true
+editor:
+  render-on-save: true
+execute:
+  warning: false
+bibliography: references.bib
 ---
 
-```{r load-packages, message = FALSE}
-library(tidyverse)
-# add any other packages you use here
-```
+```{r library_setup, include=FALSE}
+if (!require("pacman")) 
+    install.packages("pacman")
 
+# Use pacman::p_load to install and load CRAN packages
+pacman::p_load(
+    dplyr,
+    ggplot,
+    ggrepel,
+    RColorBrewer,
+    readxl,
+    scales,
+    sf,
+    tigris,
+    tidyverse
+)
+
+# Handle GitHub package separately
+if (!require("dsbox")) {
+      # Install devtools if not present
+      if (!require("devtools")) 
+          install.packages("devtools")
+devtools::install_github("tidyverse/dsbox")
+      library(dsbox)
+}
+
+options(tigris_use_cache = TRUE)
+
+ggplot2::theme_set(ggplot2::theme_minimal(base_size = 14))
+options(width = 65)
+
+knitr::opts_chunk$set(
+  fig.width = 7.5,
+  fig.asp = 0.718,
+  fig.retina = 3,
+  fig.align = "center",
+  dpi = 300
+)
+```
 
 ## 1 - A second chance
 
-```{r}
-#| label: label-me-1
+```{r second_chance_problem1}
 
 ```
 
+## 2. Arizona state of counties
 
-## 2.  Arizona state of counties
+```{r az_counties_problem2}
+az_counties <- counties(
+    state = "AZ",
+    year = 2021,
+    progress_bar = FALSE
+) |> glimpse()
 
-```{r}
-#| label: label-me-2
 
+az_counties <- az_counties |>
+    mutate(
+        name = gsub("\\s+County$", "", NAME),
+        x = st_coordinates(st_centroid(geometry))[, 1],
+        y = st_coordinates(st_centroid(geometry))[, 2]
+    )
+
+
+ggplot(az_counties) +
+geom_sf(fill = 'grey90', 
+        color = "grey10") +
+
+geom_label_repel(aes(x = x, 
+                     y = y, 
+                     label = NAME),
+                 size = 3,
+                 min.segment.length = 0.1,
+                 box.padding = 0.5,
+                 segment.color = "grey20") +
+
+coord_sf() +
+labs(
+    title = "Counties in Arizona State",
+    caption = "Source: Shapefile obtained using {tigris} R package, v2.2.1",
+    x = "Longitude",
+    y = "Latitude"
+)
 ```
 
-## 3.  Arizona state of population change
+### Resources
+
+Found help with the labeling using the `st_coordinates` and the `geom_label_repel` [@ggrepel_gallery],[@sf_manual].
+
+## 3. Arizona state of population change
 
 ```{r}
-#| label: label-me-3
+az_counties <- counties(
+    state = "AZ",
+    year = 2021,
+    progress_bar = FALSE
+)
+az_counties$NAME
 
+pop_data <- read_excel("data/co-est2023-pop-04.xlsx", 
+                       skip = 5, 
+                       n_max = 15,
+                       col_names = c("county", "base_2020", "pop_2020", 
+                                     "pop_2021", "pop_2022", "pop_2023"))
+
+pop_data <- pop_data |>
+    mutate(
+        county = sub("\\.(.+) County, Arizona", "\\1", county),
+        total_pop_change_20_23 = pop_2023 - pop_2020
+    ) |>
+    select(-c(base_2020, pop_2020, pop_2021, pop_2022, pop_2023))
+
+pop_data
+
+az_data <- az_counties |>
+    left_join(
+        pop_data, 
+        by = c("NAME" = "county")
+    )
+
+rdbu_palette <- rev(brewer.pal(5, "RdBu"))
+
+ggplot(data = az_data) +
+geom_sf(aes(fill = total_pop_change_20_23), 
+        color = "grey10") +
+
+scale_fill_gradientn(colors = rdbu_palette,
+                    name = "Population change",
+                    labels = function(x) format(x, big.mark = ",")) +
+
+coord_sf() +
+labs(
+    title = "Resident Population Change for Counties in AZ",
+    subtitle = "July 01, 2020 to July 01, 2023",
+    caption = "Source: Shapefile obtained using {tigris} R package, v2.2.1\npopulation change data from the US Census Bureau",
+    x = "Longitude",
+    y = "Latitude"
+)
 ```
 
-## 4.  Arizona state of Indiginous Tribal Regions
+### Resources
+
+Found help with the color filling using the `scale_fill_gradientn` function and then the `rdbu` palette as well [@ggplot2_scale_gradient], [@rcolorbrewer_gallery].
+
+## 4. Arizona state of Indiginous Tribal Regions
+
+```{r}
+
+```
 
 ## 5. Arizona state of patchwork
+
+```{r}
+
+```
