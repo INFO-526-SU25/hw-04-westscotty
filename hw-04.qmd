@@ -22,6 +22,7 @@ pacman::p_load(
     dplyr,
     ggplot,
     ggrepel,
+    patchwork,
     RColorBrewer,
     readxl,
     scales,
@@ -62,19 +63,14 @@ knitr::opts_chunk$set(
 ## 2. Arizona state of counties
 
 ```{r az_counties_problem2}
-az_counties <- counties(
-    state = "AZ",
-    year = 2021,
-    progress_bar = FALSE
-) |> glimpse()
-
-
-az_counties <- az_counties |>
+az_counties <- counties(state = "AZ",
+                        year = 2021,
+                        progress_bar = FALSE) |>
     mutate(
         name = gsub("\\s+County$", "", NAME),
         x = st_coordinates(st_centroid(geometry))[, 1],
         y = st_coordinates(st_centroid(geometry))[, 2]
-    )
+    ) |> glimpse()
 
 
 ggplot(az_counties) +
@@ -110,7 +106,6 @@ az_counties <- counties(
     year = 2021,
     progress_bar = FALSE
 )
-az_counties$NAME
 
 pop_data <- read_excel("data/co-est2023-pop-04.xlsx", 
                        skip = 5, 
@@ -137,7 +132,7 @@ rdbu_palette <- rev(brewer.pal(5, "RdBu"))
 
 ggplot(data = az_data) +
 geom_sf(aes(fill = total_pop_change_20_23), 
-        color = "grey10") +
+        color = "white") +
 
 scale_fill_gradientn(colors = rdbu_palette,
                     name = "Population change",
@@ -150,6 +145,10 @@ labs(
     caption = "Source: Shapefile obtained using {tigris} R package, v2.2.1\npopulation change data from the US Census Bureau",
     x = "Longitude",
     y = "Latitude"
+) +
+
+theme(
+    plot.title.position = "plot"
 )
 ```
 
@@ -159,12 +158,179 @@ Found help with the color filling using the `scale_fill_gradientn` function and 
 
 ## 4. Arizona state of Indiginous Tribal Regions
 
-```{r}
+```{r az_tribal_regions_problem4}
+az_counties <- counties(
+    state = "AZ",
+    year = 2021,
+    progress_bar = FALSE
+)
 
+tribal_data <- st_read("data/American_Indian_Reservations_in_Arizona.shp") |>
+    st_transform(crs = st_crs("EPSG:4269")) |>
+    mutate(
+        x = st_coordinates(st_centroid(geometry))[, 1],
+        y = st_coordinates(st_centroid(geometry))[, 2]
+    ) |>
+    glimpse()
+
+ggplot(az_counties) +
+geom_sf(
+    fill = 'grey90', 
+    color = "white"
+) +
+
+geom_sf(
+    data = tribal_data, 
+    linewidth = 1, 
+    fill = NA, 
+    color = "black"
+) +
+
+geom_label_repel(
+    data = tribal_data |>     
+        filter(NAME %in% c("Hopi Tribe", 
+                           "Navajo Nation", 
+                           "White Mountain Apache Tribe", 
+                           "San Carlos Apache Tribe", 
+                           "Tohono O’odham Nation")),
+    aes(x = x, 
+        y = y, 
+        label = NAME),
+    size = 4,
+    min.segment.length = 0.1,
+    box.padding = 0.5,
+    segment.color = "grey20"
+) +
+
+coord_sf() +
+labs(
+    title = "Indigenous Tribal Boundaries in AZ",
+    caption = "Source: Shapefile obtained using {tigris} R package, v2.2.1\nIndigenous Tribe Shapefile obtained from AZGeo Data",
+    x = "Longitude",
+    y = "Latitude"
+) +
+
+theme(
+    plot.title.position = "plot"
+)
 ```
+
+### Resources
+
+Found help with reading a shapefile using the `st_read` function [@rgraphgallery_shapefile]. Found help for using `st_transform` for converting coordinate systems [@heiss_dataviz_example].
 
 ## 5. Arizona state of patchwork
 
-```{r}
+```{r patchwork_plot_problem5}
+az_counties <- counties(state = "AZ",
+                        year = 2021,
+                        progress_bar = FALSE) |>
+    mutate(
+        name = gsub("\\s+County$", "", NAME),
+        x = st_coordinates(st_centroid(geometry))[, 1],
+        y = st_coordinates(st_centroid(geometry))[, 2]
+    )
 
+tribal_data <- st_read("data/American_Indian_Reservations_in_Arizona.shp") |>
+    st_transform(crs = st_crs("EPSG:4269")) |>
+    mutate(
+        x = st_coordinates(st_centroid(geometry))[, 1],
+        y = st_coordinates(st_centroid(geometry))[, 2]
+    )
+
+pop_data <- read_excel("data/co-est2023-pop-04.xlsx", 
+                       skip = 5, 
+                       n_max = 15,
+                       col_names = c("county", "base_2020", "pop_2020", 
+                                     "pop_2021", "pop_2022", "pop_2023"))
+
+pop_data <- pop_data |>
+    mutate(
+        county = sub("\\.(.+) County, Arizona", "\\1", county),
+        total_pop_change_20_23 = pop_2023 - pop_2020
+    ) |>
+    select(-c(base_2020, pop_2020, pop_2021, pop_2022, pop_2023))
+
+az_data <- az_counties |>
+    left_join(
+        pop_data, 
+        by = c("NAME" = "county")
+    )
+
+rdbu_palette <- rev(brewer.pal(5, "RdBu"))
+
+main_plot <- ggplot(data = az_data) +
+
+    geom_sf(aes(fill = total_pop_change_20_23), 
+            color = "white") +
+    
+    scale_fill_gradientn(colors = rdbu_palette,
+                         name = "Population change",
+                         labels = function(x) format(x, big.mark = ","),
+                         guide = guide_colorbar(barwidth = 10,
+                                                barheight = 1,
+                                                direction = "horizontal",
+                                                title.position = "top")
+                        ) +
+
+    geom_label_repel(data = filter(az_counties, name %in% c("Maricopa", "Pinal", "Pima")),
+                     aes(x = x, 
+                         y = y, 
+                         label = NAME),
+                     size = 4,
+                     min.segment.length = 0.1,
+                     box.padding = 0.5,
+                     segment.color = "grey20") +
+
+    coord_sf(xlim = c(-121, -109), ylim = c(28.5, 37)) +
+    labs(
+        title = NULL,
+        subtitle = NULL,
+        caption = NULL,
+        x = NULL,
+        y = NULL
+    ) +
+    
+    theme(
+        legend.position = c(0.05, 0.75),  # Adjust as needed
+        legend.justification = c(0, 0),
+    ) #+
+
+    # geom_segment(data = data.frame(
+    #     x = c(-116, -112),  # Corners of zoom area
+    #     y = c(32.0, 32.0)
+    #     # xend = c(-114, -109, -109, -114),
+    #     # yend = c(32, 32, 36, 36)
+    # ),
+    # aes(x = x, y = y,),
+    # color = "black",
+    # size = 0.5,
+    # linetype = "dashed")
+
+zoom_plot <- ggplot() +
+  geom_sf(data = filter(az_data, name %in% c("Maricopa", "Pinal", "Pima", "Santa Cruz", "Gila", "Yavapai")), aes(fill = total_pop_change_20_23), color = "white") +
+  geom_sf(data = tribal_data, fill = NA, color = "black", linewidth = 0.75) +
+
+scale_fill_gradientn(
+  colors = rdbu_palette,
+  name = NULL,
+  labels = NULL,
+  limits = range(az_data$total_pop_change_20_23)
+) +
+  geom_label_repel(
+    data = filter(tribal_data, NAME %in% c("White Mountain Apache Tribe",
+                                          "San Carlos Apache Tribe",
+                                          "Tohono O’odham Nation")),
+    aes(x = x, y = y, label = NAME),
+    size = 3, box.padding = 0.5, min.segment.length = 0
+  ) +
+  coord_sf(xlim = c(-113.5, -110), ylim = c(31.25, 34.25)) +
+  theme_void() +
+  theme(panel.background = element_rect(fill = "grey50"),
+       legend.position = "none")
+
+final_map <- main_plot +
+  inset_element(zoom_plot, left = 0.05, bottom = 0.05, right = 0.45, top = 0.45)
+
+final_map
 ```
