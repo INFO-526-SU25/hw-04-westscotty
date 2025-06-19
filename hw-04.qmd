@@ -22,6 +22,7 @@ pacman::p_load(
     dplyr,
     ggplot,
     ggrepel,
+    ggridges,
     patchwork,
     RColorBrewer,
     readxl,
@@ -56,8 +57,67 @@ knitr::opts_chunk$set(
 
 ## 1 - A second chance
 
-```{r second_chance_problem1}
+I received full marks on each problem for Homework 1, so I chose to do problem 1 over again. For this project on road traffic accidents in Edinburgh (2018), I initially visualized the distribution of accidents across time of day, split by weekday/weekend and severity, using a density plot. I chose this plot to explore temporal patterns in accident severity — for example, when serious or fatal accidents are more likely to occur — and how these patterns change between by day of week.
 
+I plan to split the data not by weekday vs weekend, but by each day of the week to see if the trends are faceted more than originally shown in the plot. The colors are not originally great to look at, I planned to use a colorblind palette to help with this, using more contrasting colors. Additionally, I plan to use a ridge-plot (geom_density_ridges) to show the relationships for all the days of the week in order.
+
+```{r second_chance_problem1}
+accidents <- read_csv("data/accidents.csv") |>
+    mutate(
+        time_hour = hour(hms(time)) + minute(hms(time)) / 60,
+        severity = factor(severity, 
+                          levels = c("Fatal", 
+                                     "Serious", 
+                                     "Slight")),
+        day_of_week = factor(day_of_week,
+                             levels = rev(c("Monday", 
+                                        "Tuesday", 
+                                        "Wednesday",
+                                        "Thursday", 
+                                        "Friday", 
+                                        "Saturday", 
+                                        "Sunday")))
+        ) |>
+
+    filter(!is.na(time_hour))
+
+ggplot(
+    accidents,
+    aes(x = time_hour, 
+        y = day_of_week, 
+        fill = severity)
+) +
+
+geom_density_ridges(
+    alpha = 0.6, 
+    scale = 1
+) +
+
+scale_x_continuous(
+    breaks = seq(0, 24, by = 4),
+    labels = sprintf("%02d:00", 
+                     seq(0, 24, by = 4))
+) +
+
+scale_fill_manual(
+    values = c("Fatal" = "#000000", 
+               "Serious" = "#D55E00", 
+               "Slight" = "#56B4E9")
+) +
+
+coord_cartesian(xlim = c(0, 24)) +
+labs(
+    title = "Traffic Accidents by Day of Week and Time of Day",
+    subtitle = "Colored by Severity",
+    x = "Time of Day",
+    y = "Day of Week",
+    fill = "Severity",
+    caption = "Source: Road traffic dataset in Edinburgh,UK \nUK Government produced data 2018"
+) +
+
+theme(
+    plot.title.position = "plot"
+)
 ```
 
 ## 2. Arizona state of counties
