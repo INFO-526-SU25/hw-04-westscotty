@@ -221,7 +221,7 @@ Found help with reading a shapefile using the `st_read` function [@rgraphgallery
 
 ## 5. Arizona state of patchwork
 
-```{r patchwork_plot_problem5}
+```{r prep_data_problem5}
 az_counties <- counties(state = "AZ",
                         year = 2021,
                         progress_bar = FALSE) |>
@@ -258,79 +258,149 @@ az_data <- az_counties |>
     )
 
 rdbu_palette <- rev(brewer.pal(5, "RdBu"))
+```
 
+```{r patchwork_main_plot_problem5}
 main_plot <- ggplot(data = az_data) +
 
-    geom_sf(aes(fill = total_pop_change_20_23), 
-            color = "white") +
+    geom_sf(
+        aes(fill = total_pop_change_20_23), 
+        color = "white"
+    ) +
     
-    scale_fill_gradientn(colors = rdbu_palette,
-                         name = "Population change",
-                         labels = function(x) format(x, big.mark = ","),
-                         guide = guide_colorbar(barwidth = 10,
-                                                barheight = 1,
-                                                direction = "horizontal",
-                                                title.position = "top")
-                        ) +
+    scale_fill_gradientn(
+        colors = rdbu_palette,
+        name = "Population change",
+        labels = function(x) format(x, big.mark = ","),
+        guide = guide_colorbar(barwidth = 9,
+                               barheight = 1,
+                               direction = "horizontal",
+                               title.position = "top")
+    ) +
 
-    geom_label_repel(data = filter(az_counties, name %in% c("Maricopa", "Pinal", "Pima")),
-                     aes(x = x, 
-                         y = y, 
-                         label = NAME),
-                     size = 4,
-                     min.segment.length = 0.1,
-                     box.padding = 0.5,
-                     segment.color = "grey20") +
+    geom_rect(
+        aes(xmin = -113.5, 
+            xmax = -110, 
+            ymin = 31.25, 
+            ymax = 34.25),
+        fill = NA, 
+        color = "black", 
+        linetype = "dashed", 
+        linewidth = 0.5
+    ) +
 
-    coord_sf(xlim = c(-121, -109), ylim = c(28.5, 37)) +
+    geom_segment(
+        data = data.frame(x = c(-113.5, -110),
+                          y = c(34.25, 31.25),
+                          xend = c(-122, -116.75),
+                          yend = c(32.75, 28)),
+        aes(x = x, 
+            y = y, 
+            xend = xend, 
+            yend = yend),
+        color = "black", 
+        linetype = "dashed", 
+        linewidth = 0.5
+    ) +
+
+    geom_label_repel(
+        data = filter(az_counties, name %in% c("Maricopa", "Pinal", "Pima")),
+        aes(x = x, 
+            y = y, 
+            label = NAME),
+        size = 4,
+        min.segment.length = 0.1,
+        box.padding = 0.5,
+        segment.color = "grey20"
+    ) +
+
+    coord_sf(
+        xlim = c(-122, -109), 
+        ylim = c(28.5, 37)
+    ) +
+
     labs(
-        title = NULL,
-        subtitle = NULL,
-        caption = NULL,
-        x = NULL,
-        y = NULL
+        title = "Resident Population Change for Counties in AZ",
+        subtitle = "July 01, 2020 to July 01, 2023",
+        caption = "Source: Shapefile obtained using {tigris} R package, v2.2.1\npopulation change data from the US Census Bureau\nIndigenous Tribe Shapefile obtained from AZGeo Data",
+        x = "Longitude",
+        y = "Latitude"
     ) +
     
     theme(
-        legend.position = c(0.05, 0.75),  # Adjust as needed
+        legend.position = c(0.0, 0.7),
         legend.justification = c(0, 0),
-    ) #+
+        plot.title.position = "plot"
+    )
+```
 
-    # geom_segment(data = data.frame(
-    #     x = c(-116, -112),  # Corners of zoom area
-    #     y = c(32.0, 32.0)
-    #     # xend = c(-114, -109, -109, -114),
-    #     # yend = c(32, 32, 36, 36)
-    # ),
-    # aes(x = x, y = y,),
-    # color = "black",
-    # size = 0.5,
-    # linetype = "dashed")
-
+```{r patchwork_zoom_plot}
 zoom_plot <- ggplot() +
-  geom_sf(data = filter(az_data, name %in% c("Maricopa", "Pinal", "Pima", "Santa Cruz", "Gila", "Yavapai")), aes(fill = total_pop_change_20_23), color = "white") +
-  geom_sf(data = tribal_data, fill = NA, color = "black", linewidth = 0.75) +
+    geom_sf(
+        data = filter(az_data, 
+                      name %in% c("Maricopa", 
+                                  "Pinal", 
+                                  "Pima", 
+                                  "Santa Cruz", 
+                                  "Gila", 
+                                  "Yavapai")), 
+        aes(fill = total_pop_change_20_23), 
+        color = "white"
+    ) +
 
-scale_fill_gradientn(
-  colors = rdbu_palette,
-  name = NULL,
-  labels = NULL,
-  limits = range(az_data$total_pop_change_20_23)
-) +
-  geom_label_repel(
-    data = filter(tribal_data, NAME %in% c("White Mountain Apache Tribe",
-                                          "San Carlos Apache Tribe",
-                                          "Tohono O’odham Nation")),
-    aes(x = x, y = y, label = NAME),
-    size = 3, box.padding = 0.5, min.segment.length = 0
-  ) +
-  coord_sf(xlim = c(-113.5, -110), ylim = c(31.25, 34.25)) +
-  theme_void() +
-  theme(panel.background = element_rect(fill = "grey50"),
-       legend.position = "none")
+    geom_sf(
+        data = tribal_data, 
+        fill = NA, 
+        color = "black", 
+        linewidth = 0.75
+    ) +
+    
+    scale_fill_gradientn(
+        colors = rdbu_palette,
+        name = NULL,
+        labels = NULL,
+        limits = range(az_data$total_pop_change_20_23,
+                       na.rm = TRUE)
+    ) +
+    
+    geom_label_repel(
+        data = filter(tribal_data, 
+                      NAME %in% c("White Mountain Apache Tribe",
+                                  "San Carlos Apache Tribe",
+                                  "Tohono O’odham Nation")),
+        aes(x = x, 
+            y = y, 
+            label = NAME),
+        size = 3, 
+        box.padding = 0.5, 
+        min.segment.length = 0
+    ) +
 
+    coord_sf(
+        xlim = c(-113.5, -110), 
+        ylim = c(31.25, 34.25)
+    ) +
+
+    theme_void() +
+    theme(
+        panel.background = element_rect(fill = "grey50"),
+        legend.position = "none"
+    )
+```
+
+```{r patchwork_final_plot}
 final_map <- main_plot +
-  inset_element(zoom_plot, left = 0.05, bottom = 0.05, right = 0.45, top = 0.45)
+    inset_element(
+        zoom_plot, 
+        left = 0.0, 
+        bottom = 0.0, 
+        right = 0.5, 
+        top = 0.5
+    )
 
 final_map
 ```
+
+### Resources
+
+Found help with the patchwork `inset_element` [@patchwork_inset_element]. Found help with drawing the line dashed line segments for `geom_segment` to emphasize the zoom window [@ggplot2_geom_segment]. Found help with drawing the dashed line box around the zoomed portion on the main plot using `geom_rect` [@geeksforgeeks_geomrect]. I read through a few resources helping my get an idea of how to even approach a zoom window,, this source was quite instructive [@r_spatial_ggplot2_sf].
